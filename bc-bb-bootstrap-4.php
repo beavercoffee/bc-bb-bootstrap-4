@@ -2,7 +2,7 @@
 /*
 Author: Beaver Coffee
 Author URI: https://beaver.coffee
-Description: Add Bootstrap 4 to Beaver Builder's default styles.
+Description: Add Bootstrap 4 to Beaver Builder default styles.
 Domain Path:
 License: GPL2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html

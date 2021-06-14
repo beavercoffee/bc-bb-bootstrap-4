@@ -13,7 +13,7 @@ BC BB Bootstrap 4
 
 == Description ==
 
-Add Bootstrap 4 to Beaver Builder's default styles.
+Add Bootstrap 4 to Beaver Builder default styles.
 
 == Changelog ==
 
