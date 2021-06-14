@@ -45,6 +45,9 @@ if(!class_exists('BC_BB_Bootstrap_4')){
     	private function __construct($file = ''){
             $this->file = $file;
             add_action('after_setup_theme', [$this, 'maybe_reboot_default_styles']);
+            add_action('customize_controls_print_footer_scripts', [$this, 'add_theme_colors']);
+            add_action('wp_enqueue_scripts', [$this, 'overwrite'], 1000);
+            add_filter('fl_builder_color_presets', [$this, 'add_plugin_colors']);
             add_filter('fl_theme_compile_less_paths', [$this, 'remove_default_styles']);
             remove_filter('fl_theme_framework_enqueue', 'FLLayout::fl_theme_framework_enqueue');
         }
@@ -54,6 +57,36 @@ if(!class_exists('BC_BB_Bootstrap_4')){
     	// public
     	//
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function add_plugin_colors($colors){
+            $colors = array_map(function($color){
+        		return '#' . ltrim($color, '#');
+        	}, $colors);
+            $colors = array_merge(['#007bff', '#6c757d', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#f8f9fa', '#343a40'], $colors);
+            $colors = array_unique($colors);
+            $colors = array_values($colors);
+            return $colors;
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function add_theme_colors(){ ?>
+            <script>
+                jQuery(function($){
+                    $('.wp-picker-container').iris({
+                        controls: {
+                            horiz: 'h', // square horizontal displays hue
+                            strip: 'l', // slider displays lightness
+                            vert: 's', // square vertical displays saturdation
+                        },
+                        mode: 'hsl',
+                        palettes: ['#007bff', '#6c757d', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#f8f9fa', '#343a40'],
+                    });
+                });
+            </script><?php
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         public function check_default_styles(){
             $defaults = $this->default_styles();
@@ -148,6 +181,41 @@ if(!class_exists('BC_BB_Bootstrap_4')){
             if($this->check_default_styles()){
             	$this->reboot_default_styles();
             }
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function overwrite(){
+            if(wp_script_is('bootstrap-4') and wp_style_is('bootstrap-4')){
+                $this->overwrite_script('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js', [], '4.6.0', true);
+                $this->overwrite_style('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css', [], '4.6.0');
+            }
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function overwrite_script($handle = '', $src = '', $deps = [], $ver = false, $in_footer = false){
+            if(wp_script_is($handle)){
+                wp_dequeue_script($handle);
+            }
+            if(wp_script_is($handle, 'registered')){
+                wp_deregister_script($handle);
+            }
+            wp_register_script($handle, $src, $deps, $ver, $in_footer);
+            wp_enqueue_script($handle);
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function overwrite_style($handle = '', $src = '', $deps = [], $ver = false){
+            if(wp_style_is($handle)){
+                wp_dequeue_style($handle);
+            }
+            if(wp_style_is($handle, 'registered')){
+                wp_deregister_style($handle);
+            }
+            wp_register_style($handle, $src, $deps, $ver);
+            wp_enqueue_style($handle);
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
