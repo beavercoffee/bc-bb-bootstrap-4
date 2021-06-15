@@ -49,7 +49,6 @@ if(!class_exists('BC_BB_Bootstrap_4')){
             add_action('wp_enqueue_scripts', [$this, 'overwrite'], 1000);
             add_filter('fl_builder_color_presets', [$this, 'add_plugin_colors']);
             add_filter('fl_theme_compile_less_paths', [$this, 'remove_default_styles']);
-            remove_filter('fl_theme_framework_enqueue', 'FLLayout::fl_theme_framework_enqueue');
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -178,6 +177,7 @@ if(!class_exists('BC_BB_Bootstrap_4')){
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         public function maybe_reboot_default_styles(){
+            remove_filter('fl_theme_framework_enqueue', 'FLLayout::fl_theme_framework_enqueue');
             if($this->check_default_styles()){
             	$this->reboot_default_styles();
             }
