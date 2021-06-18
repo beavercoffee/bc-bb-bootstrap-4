@@ -190,6 +190,9 @@ if(!class_exists('BC_BB_Bootstrap_4')){
                 $this->overwrite_script('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js', [], '4.6.0', true);
                 $this->overwrite_style('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css', [], '4.6.0');
             }
+            $src = plugin_dir_url($this->file) . 'assets/bc-bb-bootstrap-4.css';
+            $ver = filemtime(plugin_dir_path($this->file) . 'assets/bc-bb-bootstrap-4.css');
+            wp_enqueue_style('bc-bb-bootstrap-4', $src, ['bootstrap-4'], $ver);
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
