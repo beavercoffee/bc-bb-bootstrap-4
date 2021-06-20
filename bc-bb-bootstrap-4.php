@@ -12,7 +12,7 @@ Plugin URI: https://github.com/beavercoffee/bc-bb-bootstrap-4
 Requires at least: 5.7
 Requires PHP: 5.6
 Text Domain: bc-bb-bootstrap-4
-Version: 1.6.13
+Version: 1.6.20
 */
 
 if(defined('ABSPATH')){
