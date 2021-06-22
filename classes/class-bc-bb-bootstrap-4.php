@@ -91,7 +91,13 @@ if(!class_exists('BC_BB_Bootstrap_4')){
             $defaults = $this->default_styles();
         	$defaults = array_map('strval', $defaults);
         	$mods = get_theme_mods();
-        	$mods = array_map('strval', $mods);
+        	//$mods = array_map('strval', $mods);
+            $mods = array_map(function($mod){
+                if(!is_array($mod) and !is_object($mod)){
+                    $mod = (string) $mod;
+                }
+                return $mod;
+            }, $mods);
         	$intersection = array_intersect_assoc($defaults, $mods);
         	$difference = array_diff_assoc($defaults, $intersection);
         	return empty($difference);
