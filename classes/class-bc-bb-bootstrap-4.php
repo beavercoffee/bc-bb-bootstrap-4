@@ -18,13 +18,16 @@ if(!class_exists('BC_BB_Bootstrap_4')){
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     	public static function get_instance($file = ''){
-            if(null === self::$instance){
-                if(@is_file($file)){
-                    self::$instance = new self($file);
-                } else {
-                    wp_die(__('File doesn&#8217;t exist?'));
-                }
+            if(null !== self::$instance){
+                return self::$instance;
             }
+            if('' === $file){
+                wp_die(__('File doesn&#8217;t exist?'));
+            }
+            if(!is_file($file)){
+                wp_die(sprintf(__('File &#8220;%s&#8221; doesn&#8217;t exist?'), $file));
+            }
+            self::$instance = new self($file);
             return self::$instance;
     	}
 
@@ -44,11 +47,8 @@ if(!class_exists('BC_BB_Bootstrap_4')){
 
     	private function __construct($file = ''){
             $this->file = $file;
-            add_action('after_setup_theme', [$this, 'maybe_reboot_default_styles']);
-            add_action('customize_controls_print_footer_scripts', [$this, 'add_theme_colors']);
-            add_action('wp_enqueue_scripts', [$this, 'overwrite'], 1000);
-            add_filter('fl_builder_color_presets', [$this, 'add_plugin_colors']);
-            add_filter('fl_theme_compile_less_paths', [$this, 'remove_default_styles']);
+            add_action('after_setup_theme', [$this, 'after_setup_theme']);
+            add_action('plugins_loaded', [$this, 'plugins_loaded']);
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,19 +57,39 @@ if(!class_exists('BC_BB_Bootstrap_4')){
     	//
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function add_plugin_colors($colors){
-            $colors = array_map(function($color){
-        		return '#' . ltrim($color, '#');
-        	}, $colors);
-            $colors = array_merge(['#007bff', '#6c757d', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#f8f9fa', '#343a40'], $colors);
-            $colors = array_unique($colors);
-            $colors = array_values($colors);
-            return $colors;
+        public function after_setup_theme(){
+            if(!defined('FL_THEME_VERSION')){
+                return;
+            }
+            add_action('customize_controls_print_footer_scripts', [$this, 'customize_controls_print_footer_scripts']);
+            add_action('wp_enqueue_scripts', [$this, 'wp_enqueue_scripts'], 1000);
+            add_filter('fl_theme_compile_less_paths', [$this, 'fl_theme_compile_less_paths']);
+            remove_filter('fl_theme_framework_enqueue', 'FLLayout::fl_theme_framework_enqueue');
+            if($this->check_default_styles()){
+                $this->reboot_default_styles();
+            }
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function add_theme_colors(){ ?>
+        public function check_default_styles(){
+            $defaults = $this->default_styles();
+        	$defaults = array_map('strval', $defaults);
+        	$mods = get_theme_mods();
+            $mods = array_map(function($mod){
+                if(!is_array($mod) and !is_object($mod)){
+                    $mod = (string) $mod;
+                }
+                return $mod;
+            }, $mods);
+        	$intersection = array_intersect_assoc($defaults, $mods);
+        	$difference = array_diff_assoc($defaults, $intersection);
+        	return empty($difference);
+        }
+
+    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        public function customize_controls_print_footer_scripts(){ ?>
             <script>
                 jQuery(function($){
                     $('.wp-picker-container').iris({
@@ -83,24 +103,6 @@ if(!class_exists('BC_BB_Bootstrap_4')){
                     });
                 });
             </script><?php
-        }
-
-    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        public function check_default_styles(){
-            $defaults = $this->default_styles();
-        	$defaults = array_map('strval', $defaults);
-        	$mods = get_theme_mods();
-        	//$mods = array_map('strval', $mods);
-            $mods = array_map(function($mod){
-                if(!is_array($mod) and !is_object($mod)){
-                    $mod = (string) $mod;
-                }
-                return $mod;
-            }, $mods);
-        	$intersection = array_intersect_assoc($defaults, $mods);
-        	$difference = array_diff_assoc($defaults, $intersection);
-        	return empty($difference);
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,49 +184,38 @@ if(!class_exists('BC_BB_Bootstrap_4')){
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function maybe_reboot_default_styles(){
-            remove_filter('fl_theme_framework_enqueue', 'FLLayout::fl_theme_framework_enqueue');
-            if($this->check_default_styles()){
-            	$this->reboot_default_styles();
-            }
+        public function fl_builder_color_presets($colors){
+            $colors = array_map(function($color){
+        		return '#' . ltrim($color, '#');
+        	}, $colors);
+            $colors = array_merge(['#007bff', '#6c757d', '#28a745', '#17a2b8', '#ffc107', '#dc3545', '#f8f9fa', '#343a40'], $colors);
+            $colors = array_unique($colors);
+            $colors = array_values($colors);
+            return $colors;
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function overwrite(){
-            if(wp_script_is('bootstrap-4') and wp_style_is('bootstrap-4')){
-                $this->overwrite_script('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js', [], '4.6.0', true);
-                $this->overwrite_style('bootstrap-4', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css', [], '4.6.0');
+        public function fl_theme_compile_less_paths($paths){
+            foreach($paths as $index => $path){
+                if(FL_THEME_DIR . '/less/theme.less' === $path){
+                    $paths[$index] = plugin_dir_path($this->file) . 'assets/theme-1.7.9.less';
+                    break;
+                }
             }
-            $src = plugin_dir_url($this->file) . 'assets/bc-bb-bootstrap-4.css';
-            $ver = filemtime(plugin_dir_path($this->file) . 'assets/bc-bb-bootstrap-4.css');
-            wp_enqueue_style('bc-bb-bootstrap-4', $src, ['bootstrap-4'], $ver);
+            return $paths;
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function overwrite_script($handle = '', $src = '', $deps = [], $ver = false, $in_footer = false){
-            if(wp_script_is($handle)){
-                wp_dequeue_script($handle);
-            }
-            if(wp_script_is($handle, 'registered')){
-                wp_deregister_script($handle);
-            }
-            wp_register_script($handle, $src, $deps, $ver, $in_footer);
-            wp_enqueue_script($handle);
-        }
-
-    	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        public function overwrite_style($handle = '', $src = '', $deps = [], $ver = false){
-            if(wp_style_is($handle)){
-                wp_dequeue_style($handle);
-            }
-            if(wp_style_is($handle, 'registered')){
-                wp_deregister_style($handle);
-            }
-            wp_register_style($handle, $src, $deps, $ver);
-            wp_enqueue_style($handle);
+        public function plugins_loaded(){
+            if(!defined('BC_FUNCTIONS')){
+        		return;
+        	}
+            if(defined('FL_BUILDER_VERSION')){
+                add_filter('fl_builder_color_presets', [$this, 'fl_builder_color_presets']);
+        	}
+            bc_build_update_checker('https://github.com/beavercoffee/bc-bb-bootstrap-4', $this->file, 'bc-bb-bootstrap-4');
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -293,14 +284,12 @@ if(!class_exists('BC_BB_Bootstrap_4')){
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        public function remove_default_styles($paths){
-            foreach($paths as $index => $path){
-                if(FL_THEME_DIR . '/less/theme.less' === $path){
-                    $paths[$index] = plugin_dir_path($this->file) . 'assets/theme-1.7.9.less';
-                    break;
-                }
+        public function wp_enqueue_scripts(){
+            if(FLLayout::get_framework() === 'bootstrap-4'){
+                $src = plugin_dir_url($this->file) . 'assets/bc-bb-bootstrap-4.css';
+                $ver = filemtime(plugin_dir_path($this->file) . 'assets/bc-bb-bootstrap-4.css');
+                wp_enqueue_style('bc-bb-bootstrap-4', $src, ['bootstrap-4'], $ver);
             }
-            return $paths;
         }
 
     	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
